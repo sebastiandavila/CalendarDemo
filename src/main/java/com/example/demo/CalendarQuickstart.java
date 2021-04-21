@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.security.GeneralSecurityException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -75,12 +76,14 @@ public class CalendarQuickstart {
                 .setOrderBy("startTime")
                 .setSingleEvents(true)
                 .execute();
+
         List<Event> items = events.getItems();
         if (items.isEmpty()) {
             System.out.println("No upcoming events found.");
         } else {
             System.out.println("Upcoming events");
             for (Event event : items) {
+
                 DateTime start = event.getStart().getDateTime();
                 if (start == null) {
                     start = event.getStart().getDate();
@@ -93,23 +96,23 @@ public class CalendarQuickstart {
 
     }
 
-    public void guardar() throws IOException, GeneralSecurityException {
+    public void guardar(Evento evento) throws IOException, GeneralSecurityException {
         final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
         Calendar service = new Calendar.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
                 .setApplicationName(APPLICATION_NAME)
                 .build();
         Event event = new Event()
-                .setSummary("Prueba")
-                .setLocation("medellin, colombia")
-                .setDescription("wegr");
+                .setSummary(evento.getTitulo())
+                .setLocation(evento.getUbicacion())
+                .setDescription(evento.getDescripcion());
 
-        DateTime startDateTime = new DateTime("2021-04-21T14:00:00-05:00");
+        DateTime startDateTime = new DateTime(evento.buildDateStart());
         EventDateTime start = new EventDateTime()
                 .setDateTime(startDateTime)
                 .setTimeZone("GMT-05:00");
         event.setStart(start);
 
-        DateTime endDateTime = new DateTime("2021-04-21T14:00:00-05:00");
+        DateTime endDateTime = new DateTime(evento.buildDateEnd());
         EventDateTime end = new EventDateTime()
                 .setDateTime(endDateTime)
                 .setTimeZone("GMT-05:00");
@@ -118,11 +121,15 @@ public class CalendarQuickstart {
         String[] recurrence = new String[] {"RRULE:FREQ=DAILY;COUNT=2"};
         event.setRecurrence(Arrays.asList(recurrence));
 
-        EventAttendee[] attendees = new EventAttendee[] {
-                new EventAttendee().setEmail("sebas.davila.garcia@gmail.com"),
+     /*   EventAttendee[] attendees = new EventAttendee[] {
 
+                new EventAttendee().setEmail("sebas.davila.garcia@gmail.com"),
         };
-        event.setAttendees(Arrays.asList(attendees));
+        */
+        List<EventAttendee> attendees1 = new ArrayList<>();
+        evento.getCorreos().forEach(email -> attendees1.add(new EventAttendee().setEmail(email)));
+
+        event.setAttendees(attendees1);
 
         EventReminder[] reminderOverrides = new EventReminder[] {
                 new EventReminder().setMethod("email").setMinutes(24 * 60),
@@ -147,7 +154,7 @@ public class CalendarQuickstart {
 
 
         String calendarId = "primary";
-        service.events().insert(calendarId, event).setSendNotifications(true).setConferenceDataVersion(1).execute();
+       service.events().insert(calendarId, event).setSendNotifications(true).setConferenceDataVersion(1).execute();
         event = service.events().insert(calendarId, event).execute();
         System.out.printf("Event created: %s\n", event.getHtmlLink());
     }
